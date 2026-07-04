@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Digest">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<title>パーソナルダイジェスト</title>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --text:#171a21; --sub:#6b7280; --line:#e5e7eb;
+  --accent:#4f46e5; --accent2:#0ea5e9; --chipbg:#eceef4; --danger:#dc2626;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.05);
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+[data-theme="dark"]{
+  --bg:#0f1117; --card:#181b23; --text:#e8eaf0; --sub:#8b91a0; --line:#262a35;
+  --chipbg:#232734; --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1117; --card:#181b23; --text:#e8eaf0; --sub:#8b91a0; --line:#262a35;
+    --chipbg:#232734; --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;
+  font-size:16px; line-height:1.55; overscroll-behavior-y:contain}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;font-size:inherit}
+a{color:var(--accent)}
+#app{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+
+header.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:calc(10px + var(--safe-top)) 16px 8px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex:none}
+.title-wrap{flex:1;min-width:0}
+.title-wrap h1{font-size:17px;margin:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title-wrap .date{font-size:11.5px;color:var(--sub)}
+.iconbtn{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.iconbtn:active{background:var(--chipbg)}
+.spin{animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;scrollbar-width:none;position:sticky;z-index:15;
+  top:calc(56px + var(--safe-top));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:7px 14px;border-radius:999px;background:var(--chipbg);color:var(--sub);font-size:13.5px;font-weight:600;transition:.15s}
+.chip.on{background:var(--accent);color:#fff}
+
+main{flex:1;padding:4px 16px calc(86px + var(--safe-bottom))}
+.banner{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-radius:16px;padding:14px 16px;margin:10px 0;font-size:14px;box-shadow:var(--shadow)}
+.banner b{display:block;margin-bottom:4px;font-size:15px}
+.banner .bx{float:right;opacity:.8;font-size:17px;margin:-4px -4px 0 8px}
+.banner button.act{margin-top:8px;background:rgba(255,255,255,.22);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600;color:#fff}
+
+.card{background:var(--card);border-radius:16px;padding:14px 16px;margin:10px 0;box-shadow:var(--shadow);position:relative;transition:opacity .3s}
+.card.read h3{color:var(--sub);font-weight:600}
+.card .meta{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);margin-bottom:5px;flex-wrap:wrap}
+.card .meta img{width:14px;height:14px;border-radius:3px}
+.card .meta .cty{background:var(--chipbg);border-radius:5px;padding:0 5px}
+.card h3{margin:0;font-size:15.5px;font-weight:700;line-height:1.45;padding-right:26px}
+.card .desc{font-size:13px;color:var(--sub);margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .hide{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;color:var(--sub);font-size:14px;display:flex;align-items:center;justify-content:center}
+.card .badges{display:flex;gap:6px;margin-top:8px}
+.badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--chipbg);color:var(--sub)}
+.badge.hot{background:#fef3c7;color:#b45309}
+[data-theme="dark"] .badge.hot{background:#3a2e12;color:#fbbf24}
+.badge.saved-b{background:#dcfce7;color:#15803d}
+[data-theme="dark"] .badge.saved-b{background:#12321c;color:#4ade80}
+
+.skel{background:var(--card);border-radius:16px;height:92px;margin:10px 0;overflow:hidden;position:relative}
+.skel::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(128,128,140,.12),transparent);animation:sh 1.2s infinite}
+@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.empty{text-align:center;color:var(--sub);padding:48px 24px;font-size:14px}
+.empty .big{font-size:40px;margin-bottom:10px}
+
+nav.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;justify-content:space-around;
+  max-width:640px;margin:0 auto;background:color-mix(in srgb,var(--card) 92%,transparent);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);
+  padding:6px 0 calc(6px + var(--safe-bottom))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--sub);width:64px;font-weight:600}
+.tab .ic{font-size:21px;line-height:1}
+.tab.on{color:var(--accent)}
+
+.sheet-wrap{position:fixed;inset:0;z-index:50;display:none}
+.sheet-wrap.open{display:block}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--bg);
+  border-radius:22px 22px 0 0;max-height:88vh;overflow-y:auto;padding:10px 20px calc(24px + var(--safe-bottom));
+  animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+.grip{width:40px;height:4.5px;border-radius:3px;background:var(--line);margin:6px auto 14px}
+.sheet h2{font-size:19px;line-height:1.4;margin:4px 0 8px}
+.sheet .meta{font-size:12.5px;color:var(--sub);margin-bottom:12px}
+.sheet .summary{font-size:14.5px;background:var(--card);border-radius:14px;padding:14px;margin:10px 0}
+.sheet .rel h4{font-size:13px;color:var(--sub);margin:16px 0 6px}
+.sheet .rel a{display:block;padding:10px 12px;background:var(--card);border-radius:12px;margin:6px 0;font-size:13.5px;color:var(--text);text-decoration:none;border:1px solid var(--line)}
+.sheet .rel a span{color:var(--sub);font-size:11.5px;display:block}
+.btnrow{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{flex:1;min-width:130px;padding:13px;border-radius:14px;font-weight:700;font-size:14.5px;text-align:center;text-decoration:none}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:var(--chipbg);color:var(--text)}
+.btn.small{flex:none;min-width:0;padding:10px 14px;font-size:13px}
+
+.ob{position:fixed;inset:0;z-index:60;background:var(--bg);display:none;flex-direction:column;overflow-y:auto}
+.ob.open{display:flex}
+.ob .inner{max-width:560px;margin:0 auto;width:100%;padding:calc(28px + var(--safe-top)) 24px calc(28px + var(--safe-bottom));flex:1;display:flex;flex-direction:column}
+.ob .step-ind{display:flex;gap:6px;margin-bottom:26px}
+.ob .step-ind i{height:4px;flex:1;border-radius:2px;background:var(--chipbg)}
+.ob .step-ind i.on{background:var(--accent)}
+.ob h2{font-size:23px;margin:0 0 6px}
+.ob p.lead{color:var(--sub);font-size:14px;margin:0 0 18px}
+.optgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:9px;text-align:left}
+.opt .fl{font-size:20px}
+.opt.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}
+.ob .foot{margin-top:auto;padding-top:22px}
+.bigbtn{width:100%;padding:16px;border-radius:16px;background:var(--accent);color:#fff;font-weight:800;font-size:16px}
+.bigbtn:disabled{opacity:.4}
+input[type=time]{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:13px;font-size:22px;color:var(--text);width:100%;font-family:inherit}
+select{background:var(--card);border:1.5px solid var(--line);border-radius:11px;padding:9px 12px;font-size:14.5px;color:var(--text);font-family:inherit;max-width:100%}
+
+.set-group{background:var(--card);border-radius:16px;margin:12px 0;box-shadow:var(--shadow);overflow:hidden}
+.set-group .gt{font-size:12px;font-weight:700;color:var(--sub);padding:12px 16px 0;text-transform:uppercase;letter-spacing:.04em}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14.5px}
+.set-row:last-child{border-bottom:none}
+.set-row .lab{flex:1}
+.set-row .lab small{display:block;color:var(--sub);font-size:11.5px;font-weight:400}
+.switch{width:48px;height:29px;border-radius:15px;background:var(--chipbg);position:relative;transition:.2s;flex:none}
+.switch.on{background:var(--accent)}
+.switch::after{content:"";position:absolute;top:2.5px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on::after{left:21px}
+.mini-chips{display:flex;flex-wrap:wrap;gap:7px;padding:10px 16px 14px}
+.mini-chips .chip{font-size:12.5px;padding:6px 12px}
+.note{font-size:12px;color:var(--sub);padding:4px 16px 12px;line-height:1.6}
+.sec-title{font-size:19px;font-weight:800;margin:18px 0 4px}
+.sec-sub{font-size:12.5px;color:var(--sub);margin-bottom:8px}
+#toast{position:fixed;bottom:calc(100px + var(--safe-bottom));left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--text);color:var(--bg);padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;
+  opacity:0;transition:.25s;z-index:80;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.offline-bar{background:#b45309;color:#fff;font-size:12.5px;text-align:center;padding:5px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="offlineBar" class="offline-bar" style="display:none"></div>
+  <header class="topbar">
+    <div class="logo">凪</div>
+    <div class="title-wrap"><h1 id="pageTitle">パーソナルダイジェスト</h1><div class="date" id="dateLabel"></div></div>
+    <button class="iconbtn" id="refreshBtn" aria-label="refresh">↻</button>
+  </header>
+  <div class="chips" id="catChips" style="display:none"></div>
+  <main id="main"></main>
+  <nav class="tabbar">
+    <button class="tab on" data-tab="home"><span class="ic">📰</span><span data-i18n="tab_home">ホーム</span></button>
+    <button class="tab" data-tab="growth"><span class="ic">🚀</span><span data-i18n="tab_growth">成長</span></button>
+    <button class="tab" data-tab="saved"><span class="ic">📥</span><span data-i18n="tab_saved">保存</span></button>
+    <button class="tab" data-tab="settings"><span class="ic">⚙️</span><span data-i18n="tab_settings">設定</span></button>
+  </nav>
+</div>
+
+<div class="sheet-wrap" id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheetBody"></div>
+</div>
+
+<div class="ob" id="ob"><div class="inner" id="obInner"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ================= i18n ================= */
+const I18N = {
+ja: {
+  app_name:"パーソナルダイジェスト", tab_home:"ホーム", tab_growth:"成長", tab_saved:"保存", tab_settings:"設定",
+  cat_TOP:"トレンド", cat_WORLD:"世界情勢", cat_BUSINESS:"ビジネス", cat_TECHNOLOGY:"テクノロジー",
+  cat_SCIENCE:"科学", cat_HEALTH:"健康", cat_SPORTS:"スポーツ", cat_ENTERTAINMENT:"エンタメ", cat_GROWTH:"成長業界",
+  all:"すべて", loading:"読み込み中…", refresh_done:"更新しました", fetch_fail:"取得に失敗しました。キャッシュを表示中",
+  offline:"オフライン — 保存済みデータを表示中", read_original:"元記事を読む ↗", save_offline:"オフライン保存",
+  saved_done:"保存しました(オフラインで読めます)", unsave:"保存解除", less_genre:"このジャンルを減らす",
+  less_done:"表示を減らします", related:"関連報道", summary:"概要", no_summary:"(この記事の要約は提供されていません。元記事をご覧ください)",
+  growth_title:"ワンステップ成長", growth_sub:"先取りしておくと差がつく重要ニュース。上位10件は自動でオフライン保存されます。",
+  saved_title:"保存済み・履歴", saved_sub:"オフラインでも読めます", saved_growth:"成長キュレーション", saved_manual:"保存した記事", saved_read:"閲覧履歴",
+  empty_saved:"まだ保存された記事がありません", empty_feed:"記事が見つかりません。設定で国とカテゴリを確認してください",
+  settings:"設定", s_countries:"ニュースを取得する国", s_newslang:"ニュース表示言語", s_newslang_note:"選択した言語の版がGoogleニュースに存在しない国は、その国の現地語で表示されます。",
+  s_uilang:"アプリの表示言語", s_cats:"興味のあるカテゴリ", s_digest:"朝のダイジェスト通知", s_digest_time:"通知時刻",
+  s_digest_cats:"ダイジェストに含めるカテゴリ", s_notif_perm:"通知を許可する", s_notif_granted:"通知は許可済みです",
+  s_notif_denied:"通知がブロックされています(ブラウザ設定から変更してください)",
+  s_theme:"ダークモード", theme_auto:"自動", theme_light:"ライト", theme_dark:"ダーク",
+  s_learn:"興味学習データ", s_learn_reset:"学習をリセット", learn_reset_done:"学習データをリセットしました",
+  s_learn_note:"読んだ記事・スキップした記事から好みを端末内で学習し、並び順に反映します。データが外部に送信されることはありません。",
+  ios_notif_note:"iPhoneでは、Safariで「ホーム画面に追加」したアプリからのみ通知を利用できます(iOS 16.4以降)。またWebアプリの制約上、アプリを完全に閉じている間の定時通知は保証されません。アプリを開いた際に未読ダイジェストを表示して補完します。",
+  install_title:"ホーム画面に追加できます", install_body:"Safariの共有ボタン(□↑)→「ホーム画面に追加」でアプリとして使えます。通知もホーム画面追加後に有効になります。",
+  digest_ready:"☀️ 朝のダイジェストが届いています", digest_open:"ダイジェストを見る", digest_title_n:"朝のダイジェスト",
+  ob1_t:"ようこそ 👋", ob1_p:"あなた専用のニュースダイジェストを作りましょう。まず、ニュースを取得したい国を選んでください(複数可)。",
+  ob2_t:"表示言語", ob2_p:"ニュースを読む言語と、アプリUIの言語を選べます。英語学習中なら英語表示もおすすめです。",
+  ob3_t:"興味のあるカテゴリ", ob3_p:"あとから読んだ記事に合わせて自動で学習・調整されます。",
+  ob4_t:"朝のダイジェスト", ob4_p:"毎朝、指定時刻にトップニュースをまとめてお届けします。",
+  ob_next:"次へ", ob_start:"はじめる", ob_enable_notif:"通知を有効にする(推奨)", ob_skip_notif:"あとで設定する",
+  news_lang:"ニュース言語", ui_lang:"UI言語", today:"今日", min_ago:"分前", hr_ago:"時間前", day_ago:"日前",
+  for_you:"おすすめ", source_note:"提供: Google News RSS", updated:"更新", cache_shown:"キャッシュ表示",
+  perm_needed:"通知が許可されませんでした。設定からいつでも変更できます。"
+},
+en: {
+  app_name:"Personal Digest", tab_home:"Home", tab_growth:"Growth", tab_saved:"Saved", tab_settings:"Settings",
+  cat_TOP:"Trending", cat_WORLD:"World", cat_BUSINESS:"Business", cat_TECHNOLOGY:"Tech",
+  cat_SCIENCE:"Science", cat_HEALTH:"Health", cat_SPORTS:"Sports", cat_ENTERTAINMENT:"Entertainment", cat_GROWTH:"Growth Industries",
+  all:"All", loading:"Loading…", refresh_done:"Updated", fetch_fail:"Fetch failed. Showing cache",
+  offline:"Offline — showing saved data", read_original:"Read original ↗", save_offline:"Save offline",
+  saved_done:"Saved for offline reading", unsave:"Unsave", less_genre:"Show less of this genre",
+  less_done:"You'll see less of this", related:"Related coverage", summary:"Summary", no_summary:"(No summary available for this article — open the original.)",
+  growth_title:"One-Step Growth", growth_sub:"Key stories worth knowing early. Top 10 are auto-saved for offline.",
+  saved_title:"Saved & History", saved_sub:"Readable offline", saved_growth:"Growth curation", saved_manual:"Saved articles", saved_read:"Reading history",
+  empty_saved:"Nothing saved yet", empty_feed:"No articles found. Check countries & categories in Settings",
+  settings:"Settings", s_countries:"News source countries", s_newslang:"News display language", s_newslang_note:"Countries without an edition in the selected language fall back to their local language.",
+  s_uilang:"App UI language", s_cats:"Interested categories", s_digest:"Morning digest notification", s_digest_time:"Time",
+  s_digest_cats:"Digest categories", s_notif_perm:"Allow notifications", s_notif_granted:"Notifications allowed",
+  s_notif_denied:"Notifications blocked (change in browser settings)",
+  s_theme:"Dark mode", theme_auto:"Auto", theme_light:"Light", theme_dark:"Dark",
+  s_learn:"Interest learning", s_learn_reset:"Reset learning", learn_reset_done:"Learning data reset",
+  s_learn_note:"Your preferences are learned on-device from what you read and skip. Nothing is sent anywhere.",
+  ios_notif_note:"On iPhone, notifications only work after adding the app to your Home Screen from Safari (iOS 16.4+). Scheduled notifications while the app is fully closed are not guaranteed for web apps; unread digests are shown when you open the app.",
+  install_title:"Add to Home Screen", install_body:"Tap Safari's Share button → 'Add to Home Screen' to use this as an app. Notifications become available after installing.",
+  digest_ready:"☀️ Your morning digest is ready", digest_open:"Open digest", digest_title_n:"Morning Digest",
+  ob1_t:"Welcome 👋", ob1_p:"Let's build your personal news digest. First, pick the countries you want news from (multiple OK).",
+  ob2_t:"Languages", ob2_p:"Choose the language for reading news, and the app UI language.",
+  ob3_t:"Your interests", ob3_p:"The app keeps learning from what you read.",
+  ob4_t:"Morning digest", ob4_p:"Get top stories delivered at your chosen time every morning.",
+  ob_next:"Next", ob_start:"Get started", ob_enable_notif:"Enable notifications (recommended)", ob_skip_notif:"Set up later",
+  news_lang:"News language", ui_lang:"UI language", today:"Today", min_ago:"m ago", hr_ago:"h ago", day_ago:"d ago",
+  for_you:"For you", source_note:"Source: Google News RSS", updated:"Updated", cache_shown:"cached",
+  perm_needed:"Notifications weren't allowed. You can change this anytime in Settings."
+}
+};
+function t(k){ const L = I18N[prefs.uiLang] || I18N.ja; return L[k] || I18N.ja[k] || k; }
+
+/* ================= data: countries & languages ================= */
+/* editions: language code -> {hl, ceid}. Google News RSS edition parameters. */
+const COUNTRIES = [
+ {code:"US", flag:"🇺🇸", ja:"アメリカ", en:"United States", def:"en", ed:{en:{hl:"en-US",ceid:"US:en"}, es:{hl:"es-419",ceid:"US:es-419"}}},
+ {code:"JP", flag:"🇯🇵", ja:"日本", en:"Japan", def:"ja", ed:{ja:{hl:"ja",ceid:"JP:ja"}}},
+ {code:"GB", flag:"🇬🇧", ja:"イギリス", en:"United Kingdom", def:"en", ed:{en:{hl:"en-GB",ceid:"GB:en"}}},
+ {code:"CN", flag:"🇨🇳", ja:"中国", en:"China", def:"zh", ed:{zh:{hl:"zh-CN",ceid:"CN:zh-Hans"}}},
+ {code:"TW", flag:"🇹🇼", ja:"台湾", en:"Taiwan", def:"zh", ed:{zh:{hl:"zh-TW",ceid:"TW:zh-Hant"}}},
+ {code:"KR", flag:"🇰🇷", ja:"韓国", en:"South Korea", def:"ko", ed:{ko:{hl:"ko",ceid:"KR:ko"}}},
+ {code:"DE", flag:"🇩🇪", ja:"ドイツ", en:"Germany", def:"de", ed:{de:{hl:"de",ceid:"DE:de"}}},
+ {code:"FR", flag:"🇫🇷", ja:"フランス", en:"France", def:"fr", ed:{fr:{hl:"fr",ceid:"FR:fr"}}},
+ {code:"IN", flag:"🇮🇳", ja:"インド", en:"India", def:"en", ed:{en:{hl:"en-IN",ceid:"IN:en"}, hi:{hl:"hi",ceid:"IN:hi"}}},
+ {code:"CA", flag:"🇨🇦", ja:"カナダ", en:"Canada", def:"en", ed:{en:{hl:"en-CA",ceid:"CA:en"}, fr:{hl:"fr-CA",ceid:"CA:fr"}}},
+ {code:"AU", flag:"🇦🇺", ja:"オーストラリア", en:"Australia", def:"en", ed:{en:{hl:"en-AU",ceid:"AU:en"}}},
+ {code:"IT", flag:"🇮🇹", ja:"イタリア", en:"Italy", def:"it", ed:{it:{hl:"it",ceid:"IT:it"}}},
+ {code:"ES", flag:"🇪🇸", ja:"スペイン", en:"Spain", def:"es", ed:{es:{hl:"es",ceid:"ES:es"}}},
+ {code:"BR", flag:"🇧🇷", ja:"ブラジル", en:"Brazil", def:"pt", ed:{pt:{hl:"pt-BR",ceid:"BR:pt-419"}}},
+ {code:"MX", flag:"🇲🇽", ja:"メキシコ", en:"Mexico", def:"es", ed:{es:{hl:"es-419",ceid:"MX:es-419"}}},
+ {code:"ID", flag:"🇮🇩", ja:"インドネシア", en:"Indonesia", def:"id", ed:{id:{hl:"id",ceid:"ID:id"}}},
+ {code:"SG", flag:"🇸🇬", ja:"シンガポール", en:"Singapore", def:"en", ed:{en:{hl:"en-SG",ceid:"SG:en"}}},
+ {code:"RU", flag:"🇷🇺", ja:"ロシア", en:"Russia", def:"ru", ed:{ru:{hl:"ru",ceid:"RU:ru"}}}
+];
+const NEWSLANGS = [
+ {code:"auto", ja:"各国の現地語", en:"Local language of each country"},
+ {code:"ja", ja:"日本語", en:"Japanese"}, {code:"en", ja:"英語", en:"English"},
+ {code:"zh", ja:"中国語", en:"Chinese"}, {code:"ko", ja:"韓国語", en:"Korean"},
+ {code:"de", ja:"ドイツ語", en:"German"}, {code:"fr", ja:"フランス語", en:"French"},
+ {code:"es", ja:"スペイン語", en:"Spanish"}, {code:"pt", ja:"ポルトガル語", en:"Portuguese"},
+ {code:"hi", ja:"ヒンディー語", en:"Hindi"}, {code:"it", ja:"イタリア語", en:"Italian"},
+ {code:"id", ja:"インドネシア語", en:"Indonesian"}, {code:"ru", ja:"ロシア語", en:"Russian"}
+];
+const CATS = ["TOP","WORLD","BUSINESS","TECHNOLOGY","SCIENCE","HEALTH","SPORTS","ENTERTAINMENT","GROWTH"];
+const GROWTH_QUERY = {
+ ja:'生成AI OR 半導体 OR 脱炭素 OR バイオテクノロジー OR 宇宙ビジネス OR 量子コンピュータ',
+ en:'"generative AI" OR semiconductor OR "clean energy" OR biotechnology OR "space industry" OR "quantum computing"',
+ zh:'生成式AI OR 半导体 OR 清洁能源 OR 生物技术', ko:'생성형 AI OR 반도체 OR 청정에너지 OR 바이오',
+ de:'"generative KI" OR Halbleiter OR "erneuerbare Energie" OR Biotechnologie',
+ fr:'"IA générative" OR semi-conducteurs OR "énergie propre" OR biotechnologie',
+ es:'"IA generativa" OR semiconductores OR "energía limpia" OR biotecnología',
+ pt:'"IA generativa" OR semicondutores OR "energia limpa" OR biotecnologia'
+};
+
+/* ================= prefs ================= */
+const DEFAULT_PREFS = {
+ onboarded:false, uiLang:(navigator.language||"ja").startsWith("ja")?"ja":"en",
+ newsLang:"auto", countries:["JP","US"], cats:["TOP","WORLD","BUSINESS","TECHNOLOGY"],
+ digestOn:false, digestTime:"07:30", digestCats:["TOP","BUSINESS","TECHNOLOGY"], theme:"auto",
+ lastDigestDate:""
+};
+let prefs = loadPrefs();
+function loadPrefs(){
+  try{ const p = JSON.parse(localStorage.getItem("pnd_prefs")||"null"); return p ? Object.assign({},DEFAULT_PREFS,p) : Object.assign({},DEFAULT_PREFS);}catch(e){ return Object.assign({},DEFAULT_PREFS); }
+}
+function savePrefs(){ try{ localStorage.setItem("pnd_prefs", JSON.stringify(prefs)); }catch(e){} }
+
+/* ================= IndexedDB ================= */
+let _db = null;
+function idb(){
+  if(_db) return Promise.resolve(_db);
+  return new Promise((res,rej)=>{
+    const rq = indexedDB.open("pnd", 1);
+    rq.onupgradeneeded = e => { const d = e.target.result; if(!d.objectStoreNames.contains("kv")) d.createObjectStore("kv"); };
+    rq.onsuccess = e => { _db = e.target.result; res(_db); };
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function kvSet(k,v){ return idb().then(d=>new Promise((res,rej)=>{ const tx=d.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); })); }
+function kvGet(k){ return idb().then(d=>new Promise((res,rej)=>{ const rq=d.transaction("kv").objectStore("kv").get(k); rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error); })); }
+function kvDel(k){ return idb().then(d=>new Promise((res,rej)=>{ const tx=d.transaction("kv","readwrite"); tx.objectStore("kv").delete(k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); })); }
+function kvPrefix(p){ return idb().then(d=>new Promise((res,rej)=>{
+  const range = IDBKeyRange.bound(p, p+"￿");
+  const rq = d.transaction("kv").objectStore("kv").getAll(range);
+  rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error);
+})); }
+
+/* ================= feed URLs & fetching ================= */
+function editionFor(country){
+  const c = COUNTRIES.find(x=>x.code===country); if(!c) return null;
+  const lang = (prefs.newsLang!=="auto" && c.ed[prefs.newsLang]) ? prefs.newsLang : c.def;
+  const e = c.ed[lang];
+  return {hl:e.hl, gl:c.code, ceid:e.ceid, lang};
+}
+function gnUrl(ed, cat){
+  const q = "hl="+encodeURIComponent(ed.hl)+"&gl="+ed.gl+"&ceid="+encodeURIComponent(ed.ceid);
+  if(cat==="TOP") return "https://news.google.com/rss?"+q;
+  if(cat==="GROWTH"){
+    const gq = GROWTH_QUERY[ed.lang] || GROWTH_QUERY.en;
+    return "https://news.google.com/rss/search?q="+encodeURIComponent(gq)+"&"+q;
+  }
+  return "https://news.google.com/rss/headlines/section/topic/"+cat+"?"+q;
+}
+function hashId(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))|0; } return "a"+(h>>>0).toString(36); }
+function stripHtml(html){ const d=document.createElement("div"); d.innerHTML=html||""; return (d.textContent||"").replace(/\s+/g," ").trim(); }
+function extractRelated(html){
+  const d=document.createElement("div"); d.innerHTML=html||"";
+  const out=[];
+  d.querySelectorAll("a").forEach(a=>{
+    const tt=(a.textContent||"").trim();
+    const li = a.closest("li");
+    const f = li ? li.querySelector("font") : null;
+    if(tt && a.href && tt.length>8) out.push({title:tt, link:a.href, src:(f?f.textContent:"").trim()});
+  });
+  return out.slice(0,6);
+}
+function srcFromTitle(title){ const m=(title||"").match(/ - ([^-]{2,40})$/); return m ? m[1].trim() : ""; }
+function cleanTitle(title){ return (title||"").replace(/ - [^-]{2,40}$/,"").trim(); }
+
+function normalizeItem(raw, meta){
+  const title = raw.title||"";
+  return {
+    id: hashId(raw.link||title),
+    title: cleanTitle(title),
+    source: raw.source || srcFromTitle(title) || raw.author || "",
+    link: raw.link||"",
+    date: raw.pubDate ? new Date(raw.pubDate).getTime() : Date.now(),
+    desc: stripHtml(raw.description||"").slice(0, 400),
+    related: extractRelated(raw.description||""),
+    cat: meta.cat, country: meta.country, lang: meta.lang
+  };
+}
+function withTimeout(p, ms){
+  return new Promise((res,rej)=>{ const to=setTimeout(()=>rej(new Error("timeout")),ms); p.then(v=>{clearTimeout(to);res(v);},e=>{clearTimeout(to);rej(e);}); });
+}
+async function fetchViaDirect(url){
+  const r = await withTimeout(fetch(url), 8000);
+  if(!r.ok) throw new Error("http "+r.status);
+  return parseXmlItems(await r.text());
+}
+async function fetchViaRss2json(url){
+  const r = await withTimeout(fetch("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(url)), 20000);
+  if(!r.ok) throw new Error("http "+r.status);
+  const j = await r.json();
+  if(j.status!=="ok" || !Array.isArray(j.items)) throw new Error("bad payload");
+  return j.items;
+}
+async function fetchViaAllorigins(url){
+  const r = await withTimeout(fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(url)), 20000);
+  if(!r.ok) throw new Error("http "+r.status);
+  return parseXmlItems(await r.text());
+}
+function parseXmlItems(xmlText){
+  const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+  if(doc.querySelector("parsererror")) throw new Error("xml parse error");
+  const items = [];
+  doc.querySelectorAll("item").forEach(it=>{
+    const g = s => { const el = it.querySelector(s); return el ? el.textContent : ""; };
+    items.push({title:g("title"), link:g("link"), pubDate:g("pubDate"), description:g("description"), source:g("source")});
+  });
+  if(!items.length) throw new Error("no items");
+  return items;
+}
+/* fallback chain: direct fetch (usually blocked by CORS in browsers) -> rss2json -> allorigins */
+async function fetchFeed(country, cat, force){
+  const ed = editionFor(country); if(!ed) return [];
+  const url = gnUrl(ed, cat);
+  const cacheKey = "feed:"+country+":"+cat+":"+ed.lang;
+  const cached = await kvGet(cacheKey).catch(()=>null);
+  const FRESH = 15*60*1000;
+  if(cached && !force && Date.now()-cached.ts < FRESH) return cached.items;
+  if(!navigator.onLine){ return cached ? cached.items : []; }
+  const meta = {cat, country, lang:ed.lang};
+  const strategies = [fetchViaDirect, fetchViaRss2json, fetchViaAllorigins];
+  for(const s of strategies){
+    try{
+      const raw = await s(url);
+      const items = raw.map(r=>normalizeItem(r, meta)).filter(a=>a.title);
+      if(items.length){ kvSet(cacheKey, {ts:Date.now(), items}).catch(()=>{}); return items; }
+    }catch(e){ /* try next strategy */ }
+  }
+  state.fetchErrors++;
+  return cached ? cached.items : [];
+}
+
+/* ================= interest learning (on-device) ================= */
+const STOP = new Set(["これ","それ","ため","こと","もの","について","そして","または","する","した","ない","the","a","an","of","to","in","on","for","and","or","is","are","was","be","with","at","by","from","as","that","this","it","its","new","says","say","after","over","amid","how","why","what","who","will"]);
+let _seg = null;
+function tokenize(text){
+  const toks = [];
+  try{
+    if(!_seg && typeof Intl !== "undefined" && Intl.Segmenter) _seg = new Intl.Segmenter(undefined, {granularity:"word"});
+    if(_seg){
+      for(const s of _seg.segment(text)){
+        const w = s.segment.trim().toLowerCase();
+        if(s.isWordLike && w.length>=2 && !STOP.has(w) && !/^\d+$/.test(w)) toks.push(w);
+      }
+      return toks.slice(0,12);
+    }
+  }catch(e){}
+  return (text.toLowerCase().match(/[\p{L}\p{N}]{2,}/gu)||[]).filter(w=>!STOP.has(w)).slice(0,12);
+}
+let weights = {cats:{}, kws:{}, ts:Date.now()};
+async function loadWeights(){
+  const w = await kvGet("weights").catch(()=>null);
+  if(w){ weights = w; applyDecay(); }
+}
+function applyDecay(){
+  const days = (Date.now()-(weights.ts||Date.now()))/86400000;
+  if(days<=0.1) return;
+  const f = Math.pow(0.97, days);
+  for(const k in weights.cats) weights.cats[k]*=f;
+  for(const k in weights.kws){ weights.kws[k]*=f; if(Math.abs(weights.kws[k])<0.05) delete weights.kws[k]; }
+  weights.ts = Date.now();
+  kvSet("weights", weights).catch(()=>{});
+}
+function clamp(v,lo,hi){ return Math.min(hi, Math.max(lo, v)); }
+function learn(article, delta){
+  weights.cats[article.cat] = clamp((weights.cats[article.cat]||0) + delta, -6, 10);
+  tokenize(article.title).slice(0,6).forEach(w=>{
+    weights.kws[w] = clamp((weights.kws[w]||0) + delta*0.5, -4, 6);
+  });
+  kvSet("weights", weights).catch(()=>{});
+}
+function scoreArticle(a){
+  let s = (weights.cats[a.cat]||0)*1.6;
+  const toks = tokenize(a.title);
+  let kw = 0; toks.forEach(w=>{ kw += weights.kws[w]||0; });
+  s += clamp(kw, -5, 8);
+  const ageH = (Date.now()-a.date)/3600000;
+  s += Math.max(0, 3 - ageH/8);
+  return s;
+}
+
+/* ================= state & rendering ================= */
+const state = {tab:"home", cat:"ALL", articles:[], loading:false, fetchErrors:0, hidden:new Set(), readIds:new Set(), savedIds:new Set(), digestArticles:null};
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function esc(s){ return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"), 2400); }
+function relTime(ts){
+  const m = Math.max(1, Math.round((Date.now()-ts)/60000));
+  if(m<60) return m+t("min_ago");
+  const h = Math.round(m/60); if(h<24) return h+t("hr_ago");
+  return Math.round(h/24)+t("day_ago");
+}
+function countryLabel(code){ const c=COUNTRIES.find(x=>x.code===code); return c ? c.flag : code; }
+function applyTheme(){
+  if(prefs.theme==="auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", prefs.theme);
+}
+function applyUiLang(){
+  document.documentElement.lang = prefs.uiLang;
+  $$("[data-i18n]").forEach(el=>{ el.textContent = t(el.getAttribute("data-i18n")); });
+  $("#dateLabel").textContent = new Date().toLocaleDateString(prefs.uiLang==="ja"?"ja-JP":"en-US", {month:"long", day:"numeric", weekday:"short"});
+}
+
+function renderChips(){
+  const wrap = $("#catChips");
+  if(state.tab!=="home"){ wrap.style.display="none"; return; }
+  wrap.style.display="flex";
+  const cats = ["ALL"].concat(prefs.cats);
+  wrap.innerHTML = cats.map(c=>'<button class="chip '+(state.cat===c?"on":"")+'" data-cat="'+c+'">'+(c==="ALL"?t("all"):t("cat_"+c))+'</button>').join("");
+  wrap.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ state.cat=b.dataset.cat; renderChips(); loadHome(false); });
+}
+
+function hostOf(url){ try{ return new URL(url).hostname; }catch(e){ return ""; } }
+function articleCard(a, opts){
+  opts = opts||{};
+  const hot = scoreArticle(a) > 3.5 && (weights.cats[a.cat]||0) > 0.5;
+  return '<article class="card '+(state.readIds.has(a.id)?"read":"")+'" data-id="'+a.id+'">'
+    + (opts.noHide?"":'<button class="hide" data-hide="'+a.id+'" aria-label="hide">✕</button>')
+    + '<div class="meta">'
+    + '<img src="https://www.google.com/s2/favicons?domain='+encodeURIComponent(hostOf(a.link))+'&sz=32" onerror="this.style.display=\'none\'" alt="">'
+    + '<span>'+esc(a.source||"")+'</span><span>·</span><span>'+relTime(a.date)+'</span>'
+    + '<span class="cty">'+countryLabel(a.country)+' '+t("cat_"+a.cat)+'</span>'
+    + '</div>'
+    + '<h3>'+esc(a.title)+'</h3>'
+    + (a.desc && a.desc!==a.title ? '<div class="desc">'+esc(a.desc)+'</div>' : "")
+    + '<div class="badges">'
+    + (hot?'<span class="badge hot">★ '+t("for_you")+'</span>':"")
+    + (state.savedIds.has(a.id)?'<span class="badge saved-b">📥 '+t("tab_saved")+'</span>':"")
+    + '</div></article>';
+}
+
+function bindCards(container, list){
+  container.querySelectorAll(".card").forEach(el=>{
+    el.addEventListener("click", ev=>{
+      if(ev.target.closest("[data-hide]")) return;
+      const a = list.find(x=>x.id===el.dataset.id);
+      if(a) openDetail(a);
+    });
+  });
+  container.querySelectorAll("[data-hide]").forEach(b=>{
+    b.addEventListener("click", ev=>{
+      ev.stopPropagation();
+      const a = list.find(x=>x.id===b.dataset.hide);
+      if(!a) return;
+      state.hidden.add(a.id);
+      learn(a, -1);
+      const card = b.closest(".card");
+      card.style.opacity="0";
+      setTimeout(()=>{ card.remove(); }, 300);
+      toast(t("less_done"));
+    });
+  });
+}
+
+/* ---------- home ---------- */
+async function loadHome(force){
+  renderChips();
+  const main = $("#main");
+  state.loading = true; state.fetchErrors = 0;
+  $("#refreshBtn").classList.add("spin");
+  const head = pendingDigestBanner() + installBanner();
+  main.innerHTML = head + '<div class="skel"></div>'.repeat(4);
+  bindBanners();
+  const cats = state.cat==="ALL" ? prefs.cats.filter(c=>c!=="GROWTH").slice(0,4) : [state.cat];
+  const jobs = [];
+  prefs.countries.forEach(cc=>cats.forEach(cat=>jobs.push(fetchFeed(cc,cat,force))));
+  const results = await Promise.all(jobs);
+  let all = results.flat();
+  const seen = new Set();
+  all = all.filter(a=>{ const k=a.title.slice(0,60); if(seen.has(k)||state.hidden.has(a.id)) return false; seen.add(k); return true; });
+  all.sort((x,y)=>scoreArticle(y)-scoreArticle(x));
+  state.articles = all;
+  state.loading = false;
+  $("#refreshBtn").classList.remove("spin");
+  if(!all.length){
+    main.innerHTML = head + '<div class="empty"><div class="big">📭</div>'+t(navigator.onLine?"empty_feed":"offline")+'</div>';
+    bindBanners(); return;
+  }
+  main.innerHTML = head + all.slice(0,60).map(a=>articleCard(a)).join("") +
+    '<div class="note" style="text-align:center">'+t("source_note")+(state.fetchErrors?" · "+t("cache_shown"):"")+'</div>';
+  bindBanners();
+  bindCards(main, all);
+}
+
+/* ---------- growth ---------- */
+async function loadGrowth(force){
+  const main = $("#main");
+  $("#refreshBtn").classList.add("spin");
+  const head = '<div class="sec-title">🚀 '+t("growth_title")+'</div><div class="sec-sub">'+t("growth_sub")+'</div>';
+  main.innerHTML = head + '<div class="skel"></div>'.repeat(4);
+  const jobs = [];
+  prefs.countries.forEach(cc=>{
+    jobs.push(fetchFeed(cc,"GROWTH",force));
+    jobs.push(fetchFeed(cc,"TECHNOLOGY",force));
+    jobs.push(fetchFeed(cc,"BUSINESS",force));
+  });
+  const res = await Promise.all(jobs);
+  let all = res.flat();
+  const seen = new Set();
+  all = all.filter(a=>{ const k=a.title.slice(0,60); if(seen.has(k)||state.hidden.has(a.id)) return false; seen.add(k); return true; });
+  all.sort((x,y)=>scoreArticle(y)-scoreArticle(x));
+  const top = all.slice(0,30);
+  top.slice(0,10).forEach(a=>{ kvSet("saved:"+a.id, {a:a, savedAt:Date.now(), reason:"growth"}).catch(()=>{}); state.savedIds.add(a.id); });
+  $("#refreshBtn").classList.remove("spin");
+  main.innerHTML = head + (top.length ? top.map(a=>articleCard(a)).join("") : '<div class="empty"><div class="big">📭</div>'+t(navigator.onLine?"empty_feed":"offline")+'</div>');
+  bindCards(main, top);
+}
+
+/* ---------- saved ---------- */
+async function loadSaved(){
+  const main = $("#main");
+  const rows = await kvPrefix("saved:").catch(()=>[]);
+  rows.sort((x,y)=>y.savedAt-x.savedAt);
+  const groups = {growth:[], manual:[], read:[]};
+  rows.forEach(r=>{ (groups[r.reason]||groups.read).push(r.a); });
+  let html = '<div class="sec-title">📥 '+t("saved_title")+'</div><div class="sec-sub">'+t("saved_sub")+'</div>';
+  const flat = [];
+  [["growth","saved_growth"],["manual","saved_manual"],["read","saved_read"]].forEach(pair=>{
+    const key=pair[0], label=pair[1];
+    if(groups[key].length){
+      html += '<div class="sec-sub" style="margin-top:14px;font-weight:700">'+t(label)+' ('+groups[key].length+')</div>';
+      html += groups[key].slice(0,40).map(a=>{ flat.push(a); return articleCard(a,{noHide:true}); }).join("");
+    }
+  });
+  if(!rows.length) html += '<div class="empty"><div class="big">🗂</div>'+t("empty_saved")+'</div>';
+  main.innerHTML = html;
+  bindCards(main, flat);
+}
+
+/* ---------- detail sheet ---------- */
+function openDetail(a){
+  state.readIds.add(a.id);
+  learn(a, 1);
+  const existingReason = state.savedIds.has(a.id) ? "manual" : "read";
+  kvSet("saved:"+a.id, {a:a, savedAt:Date.now(), reason:existingReason}).catch(()=>{});
+  const rel = (a.related||[]).filter(r=>r.title.slice(0,40)!==a.title.slice(0,40));
+  $("#sheetBody").innerHTML = '<div class="grip"></div>'
+    + '<div class="meta">'+countryLabel(a.country)+' '+esc(a.source)+' · '+relTime(a.date)+' · '+t("cat_"+a.cat)+'</div>'
+    + '<h2>'+esc(a.title)+'</h2>'
+    + '<div class="summary">'+(a.desc && a.desc.length>a.title.length+5 ? esc(a.desc) : t("no_summary"))+'</div>'
+    + (rel.length?'<div class="rel"><h4>'+t("related")+'</h4>'+rel.map(r=>'<a href="'+esc(r.link)+'" target="_blank" rel="noopener">'+esc(r.title)+(r.src?'<span>'+esc(r.src)+'</span>':"")+'</a>').join("")+'</div>':"")
+    + '<div class="btnrow">'
+    + '<a class="btn primary" href="'+esc(a.link)+'" target="_blank" rel="noopener">'+t("read_original")+'</a>'
+    + '<button class="btn ghost" id="saveBtn">'+(state.savedIds.has(a.id)?t("unsave"):"📥 "+t("save_offline"))+'</button>'
+    + '</div>'
+    + '<div class="btnrow"><button class="btn ghost small" id="lessBtn">👎 '+t("less_genre")+'</button></div>';
+  $("#sheetWrap").classList.add("open");
+  $("#saveBtn").onclick = async ()=>{
+    if(state.savedIds.has(a.id)){
+      state.savedIds.delete(a.id);
+      await kvSet("saved:"+a.id, {a:a, savedAt:Date.now(), reason:"read"}).catch(()=>{});
+      $("#saveBtn").textContent = "📥 "+t("save_offline");
+    } else {
+      state.savedIds.add(a.id);
+      await kvSet("saved:"+a.id, {a:a, savedAt:Date.now(), reason:"manual"}).catch(()=>{});
+      learn(a, 0.5);
+      $("#saveBtn").textContent = t("unsave");
+      toast(t("saved_done"));
+    }
+  };
+  $("#lessBtn").onclick = ()=>{ learn(a, -1.5); closeSheet(); toast(t("less_done")); };
+  const card = document.querySelector('.card[data-id="'+a.id+'"]');
+  if(card) card.classList.add("read");
+}
+function closeSheet(){ $("#sheetWrap").classList.remove("open"); }
+
+/* ---------- banners ---------- */
+function isIOS(){ return /iP(hone|ad|od)/.test(navigator.userAgent); }
+function isStandalone(){ return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone===true; }
+function installBanner(){
+  if(!isIOS() || isStandalone() || sessionStorage.getItem("hideInstall")) return "";
+  return '<div class="banner" id="installBanner"><span class="bx" data-close="install">✕</span><b>📱 '+t("install_title")+'</b>'+t("install_body")+'</div>';
+}
+function pendingDigestBanner(){
+  if(!state.digestArticles || !state.digestArticles.length) return "";
+  return '<div class="banner" id="digestBanner"><span class="bx" data-close="digest">✕</span><b>'+t("digest_ready")+'</b>'
+  + state.digestArticles.slice(0,3).map(a=>"・"+esc(a.title.slice(0,42))).join("<br>")
+  + '<button class="act" id="openDigestBtn">'+t("digest_open")+'</button></div>';
+}
+function bindBanners(){
+  $$("[data-close]").forEach(b=>b.onclick=ev=>{
+    ev.stopPropagation();
+    if(b.dataset.close==="install") sessionStorage.setItem("hideInstall","1");
+    if(b.dataset.close==="digest") state.digestArticles=null;
+    b.closest(".banner").remove();
+  });
+  const od = $("#openDigestBtn");
+  if(od) od.onclick = ()=>{ showDigestSheet(); };
+}
+
+/* ---------- digest ---------- */
+async function buildDigest(){
+  const jobs = [];
+  prefs.countries.forEach(cc=>prefs.digestCats.forEach(cat=>jobs.push(fetchFeed(cc,cat,false))));
+  const res = await Promise.all(jobs);
+  let all = res.flat();
+  const seen = new Set();
+  all = all.filter(a=>{ const k=a.title.slice(0,60); if(seen.has(k)) return false; seen.add(k); return true; });
+  all.sort((x,y)=>scoreArticle(y)-scoreArticle(x));
+  return all.slice(0,8);
+}
+function showDigestSheet(){
+  const list = state.digestArticles||[];
+  $("#sheetBody").innerHTML = '<div class="grip"></div><h2>☀️ '+t("digest_title_n")+'</h2>'
+    + '<div class="meta">'+new Date().toLocaleDateString(prefs.uiLang==="ja"?"ja-JP":"en-US",{month:"long",day:"numeric",weekday:"long"})+'</div>'
+    + list.map(a=>articleCard(a,{noHide:true})).join("");
+  $("#sheetWrap").classList.add("open");
+  bindCards($("#sheetBody"), list);
+}
+async function runDigestCheck(){
+  if(!prefs.digestOn) return;
+  const now = new Date();
+  const parts = prefs.digestTime.split(":");
+  const hh = Number(parts[0]||7), mm = Number(parts[1]||30);
+  const todayStr = now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+  const due = now.getHours()>hh || (now.getHours()===hh && now.getMinutes()>=mm);
+  if(due && prefs.lastDigestDate!==todayStr){
+    prefs.lastDigestDate = todayStr; savePrefs();
+    const arts = await buildDigest();
+    if(!arts.length) return;
+    state.digestArticles = arts;
+    notifyDigest(arts);
+    if(state.tab==="home") loadHome(false);
+  }
+}
+async function notifyDigest(arts){
+  try{
+    if(!("Notification" in window) || Notification.permission!=="granted") return;
+    const body = arts.slice(0,3).map(a=>"・"+a.title.slice(0,40)).join("\n");
+    let reg = null;
+    if(navigator.serviceWorker) reg = await navigator.serviceWorker.getRegistration();
+    if(reg && reg.showNotification){
+      reg.showNotification("☀️ "+t("digest_title_n"), {body:body, icon:"./icon-192.png", badge:"./icon-192.png", tag:"digest"});
+    } else {
+      new Notification("☀️ "+t("digest_title_n"), {body:body, icon:"./icon-192.png"});
+    }
+  }catch(e){}
+}
+let digestTimer = null;
+function scheduleDigestTimer(){
+  clearTimeout(digestTimer);
+  if(!prefs.digestOn) return;
+  const parts = prefs.digestTime.split(":");
+  const hh = Number(parts[0]||7), mm = Number(parts[1]||30);
+  const next = new Date();
+  next.setHours(hh,mm,0,0);
+  if(next <= new Date()) next.setDate(next.getDate()+1);
+  const ms = next - new Date();
+  if(ms < 2147000000) digestTimer = setTimeout(()=>{ runDigestCheck(); scheduleDigestTimer(); }, ms+2000);
+}
+
+/* ---------- settings ---------- */
+function switchEl(id,on){ return '<button class="switch '+(on?"on":"")+'" id="'+id+'" role="switch" aria-checked="'+on+'"></button>'; }
+function renderSettings(){
+  const main = $("#main");
+  const nl = prefs.uiLang;
+  const notifState = !("Notification" in window) ? "unsupported" : Notification.permission;
+  main.innerHTML = ''
+  + '<div class="sec-title">⚙️ '+t("settings")+'</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_countries")+'</div>'
+  +   '<div class="mini-chips" id="setCountries">'+COUNTRIES.map(c=>'<button class="chip '+(prefs.countries.includes(c.code)?"on":"")+'" data-c="'+c.code+'">'+c.flag+' '+(c[nl]||c.en)+'</button>').join("")+'</div>'
+  + '</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_newslang")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("news_lang")+'</span>'
+  +     '<select id="selNewsLang">'+NEWSLANGS.map(l=>'<option value="'+l.code+'" '+(prefs.newsLang===l.code?"selected":"")+'>'+(l[nl]||l.en)+'</option>').join("")+'</select></div>'
+  +   '<div class="note">'+t("s_newslang_note")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("ui_lang")+'</span>'
+  +     '<select id="selUiLang"><option value="ja" '+(prefs.uiLang==="ja"?"selected":"")+'>日本語</option><option value="en" '+(prefs.uiLang==="en"?"selected":"")+'>English</option></select></div>'
+  + '</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_cats")+'</div>'
+  +   '<div class="mini-chips" id="setCats">'+CATS.map(c=>'<button class="chip '+(prefs.cats.includes(c)?"on":"")+'" data-c="'+c+'">'+t("cat_"+c)+'</button>').join("")+'</div>'
+  + '</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_digest")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("s_digest")+'</span>'+switchEl("swDigest",prefs.digestOn)+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("s_digest_time")+'</span><input type="time" id="digestTime" value="'+prefs.digestTime+'" style="width:130px;font-size:16px;padding:8px"></div>'
+  +   '<div class="gt">'+t("s_digest_cats")+'</div>'
+  +   '<div class="mini-chips" id="setDigestCats">'+CATS.filter(c=>c!=="GROWTH").map(c=>'<button class="chip '+(prefs.digestCats.includes(c)?"on":"")+'" data-c="'+c+'">'+t("cat_"+c)+'</button>').join("")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+(notifState==="granted"?t("s_notif_granted"):notifState==="denied"?t("s_notif_denied"):t("s_notif_perm"))+'</span>'
+  +     (notifState==="default"?'<button class="btn primary small" id="notifBtn">'+t("s_notif_perm")+'</button>':"")+'</div>'
+  +   '<div class="note">'+t("ios_notif_note")+'</div>'
+  + '</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_theme")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("s_theme")+'</span>'
+  +     '<select id="selTheme"><option value="auto" '+(prefs.theme==="auto"?"selected":"")+'>'+t("theme_auto")+'</option><option value="light" '+(prefs.theme==="light"?"selected":"")+'>'+t("theme_light")+'</option><option value="dark" '+(prefs.theme==="dark"?"selected":"")+'>'+t("theme_dark")+'</option></select></div>'
+  + '</div>'
+  + '<div class="set-group"><div class="gt">'+t("s_learn")+'</div>'
+  +   '<div class="note">'+t("s_learn_note")+'</div>'
+  +   '<div class="set-row"><span class="lab">'+t("s_learn_reset")+'</span><button class="btn ghost small" id="resetLearn" style="color:var(--danger)">'+t("s_learn_reset")+'</button></div>'
+  + '</div>'
+  + '<div class="note" style="text-align:center">'+t("source_note")+' · v1.0</div>';
+
+  const toggleChip = (wrapId, arrName, min) => {
+    $("#"+wrapId).querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+      const v=b.dataset.c; const arr=prefs[arrName];
+      if(arr.includes(v)){ if(arr.length>min) prefs[arrName]=arr.filter(x=>x!==v); }
+      else prefs[arrName]=arr.concat([v]);
+      savePrefs(); renderSettings();
+    });
+  };
+  toggleChip("setCountries","countries",1);
+  toggleChip("setCats","cats",1);
+  toggleChip("setDigestCats","digestCats",1);
+  $("#selNewsLang").onchange = e=>{ prefs.newsLang=e.target.value; savePrefs(); };
+  $("#selUiLang").onchange = e=>{ prefs.uiLang=e.target.value; savePrefs(); applyUiLang(); renderSettings(); };
+  $("#selTheme").onchange = e=>{ prefs.theme=e.target.value; savePrefs(); applyTheme(); };
+  $("#swDigest").onclick = ()=>{ prefs.digestOn=!prefs.digestOn; savePrefs(); scheduleDigestTimer(); renderSettings(); if(prefs.digestOn) requestNotifPerm(false); };
+  $("#digestTime").onchange = e=>{ prefs.digestTime=e.target.value||"07:30"; savePrefs(); scheduleDigestTimer(); };
+  const nb = $("#notifBtn"); if(nb) nb.onclick = ()=>requestNotifPerm(true);
+  $("#resetLearn").onclick = async ()=>{ weights={cats:{},kws:{},ts:Date.now()}; await kvSet("weights",weights).catch(()=>{}); toast(t("learn_reset_done")); };
+}
+async function requestNotifPerm(fromBtn){
+  try{
+    if(!("Notification" in window)) return;
+    if(Notification.permission==="default"){
+      const p = await Notification.requestPermission();
+      if(p!=="granted" && fromBtn) toast(t("perm_needed"));
+      if(state.tab==="settings") renderSettings();
+    }
+  }catch(e){}
+}
+
+/* ---------- onboarding ---------- */
+function renderOnboarding(step){
+  const ob = $("#ob"); ob.classList.add("open");
+  const inner = $("#obInner");
+  const ind = '<div class="step-ind">'+[0,1,2,3].map(i=>'<i class="'+(i<=step?"on":"")+'"></i>').join("")+'</div>';
+  const nl = prefs.uiLang;
+  if(step===0){
+    inner.innerHTML = ind+'<h2>'+t("ob1_t")+'</h2><p class="lead">'+t("ob1_p")+'</p>'
+    + '<div class="optgrid">'+COUNTRIES.map(c=>'<button class="opt '+(prefs.countries.includes(c.code)?"on":"")+'" data-c="'+c.code+'"><span class="fl">'+c.flag+'</span>'+(c[nl]||c.en)+'</button>').join("")+'</div>'
+    + '<div class="foot"><button class="bigbtn" id="obNext" '+(prefs.countries.length?"":"disabled")+'>'+t("ob_next")+'</button></div>';
+    inner.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      const v=b.dataset.c;
+      prefs.countries = prefs.countries.includes(v) ? prefs.countries.filter(x=>x!==v) : prefs.countries.concat([v]);
+      savePrefs(); renderOnboarding(0);
+    });
+    $("#obNext").onclick=()=>renderOnboarding(1);
+  } else if(step===1){
+    inner.innerHTML = ind+'<h2>'+t("ob2_t")+'</h2><p class="lead">'+t("ob2_p")+'</p>'
+    + '<div class="sec-sub" style="font-weight:700">'+t("news_lang")+'</div>'
+    + '<div class="optgrid">'+NEWSLANGS.slice(0,8).map(l=>'<button class="opt '+(prefs.newsLang===l.code?"on":"")+'" data-l="'+l.code+'">'+(l[nl]||l.en)+'</button>').join("")+'</div>'
+    + '<div class="sec-sub" style="font-weight:700;margin-top:16px">'+t("ui_lang")+'</div>'
+    + '<div class="optgrid"><button class="opt '+(prefs.uiLang==="ja"?"on":"")+'" data-u="ja">日本語</button><button class="opt '+(prefs.uiLang==="en"?"on":"")+'" data-u="en">English</button></div>'
+    + '<div class="foot"><button class="bigbtn" id="obNext">'+t("ob_next")+'</button></div>';
+    inner.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ prefs.newsLang=b.dataset.l; savePrefs(); renderOnboarding(1); });
+    inner.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>{ prefs.uiLang=b.dataset.u; savePrefs(); applyUiLang(); renderOnboarding(1); });
+    $("#obNext").onclick=()=>renderOnboarding(2);
+  } else if(step===2){
+    inner.innerHTML = ind+'<h2>'+t("ob3_t")+'</h2><p class="lead">'+t("ob3_p")+'</p>'
+    + '<div class="optgrid">'+CATS.map(c=>'<button class="opt '+(prefs.cats.includes(c)?"on":"")+'" data-c="'+c+'">'+t("cat_"+c)+'</button>').join("")+'</div>'
+    + '<div class="foot"><button class="bigbtn" id="obNext" '+(prefs.cats.length?"":"disabled")+'>'+t("ob_next")+'</button></div>';
+    inner.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+      const v=b.dataset.c;
+      prefs.cats = prefs.cats.includes(v) ? prefs.cats.filter(x=>x!==v) : prefs.cats.concat([v]);
+      savePrefs(); renderOnboarding(2);
+    });
+    $("#obNext").onclick=()=>renderOnboarding(3);
+  } else {
+    inner.innerHTML = ind+'<h2>'+t("ob4_t")+'</h2><p class="lead">'+t("ob4_p")+'</p>'
+    + '<input type="time" id="obTime" value="'+prefs.digestTime+'">'
+    + '<div class="mini-chips" style="padding:14px 0" id="obDigestCats">'+CATS.filter(c=>c!=="GROWTH").map(c=>'<button class="chip '+(prefs.digestCats.includes(c)?"on":"")+'" data-c="'+c+'">'+t("cat_"+c)+'</button>').join("")+'</div>'
+    + '<div class="note" style="padding:0">'+t("ios_notif_note")+'</div>'
+    + '<div class="foot">'
+    + '<button class="bigbtn" id="obNotif">'+t("ob_enable_notif")+'</button>'
+    + '<button class="bigbtn" id="obSkip" style="background:var(--chipbg);color:var(--text);margin-top:10px">'+t("ob_skip_notif")+'</button>'
+    + '</div>';
+    $("#obDigestCats").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+      const v=b.dataset.c;
+      prefs.digestCats = prefs.digestCats.includes(v) ? prefs.digestCats.filter(x=>x!==v) : prefs.digestCats.concat([v]);
+      savePrefs(); renderOnboarding(3);
+    });
+    const finish = async (withNotif)=>{
+      prefs.digestTime = $("#obTime").value || "07:30";
+      prefs.digestOn = true;
+      prefs.onboarded = true;
+      savePrefs();
+      if(withNotif) await requestNotifPerm(true);
+      $("#ob").classList.remove("open");
+      scheduleDigestTimer();
+      applyUiLang();
+      switchTab("home", true);
+    };
+    $("#obNotif").onclick=()=>finish(true);
+    $("#obSkip").onclick=()=>finish(false);
+  }
+}
+
+/* ---------- tabs & init ---------- */
+function switchTab(tab, force){
+  if(state.tab===tab && !force) return;
+  state.tab = tab;
+  $$(".tab").forEach(b=>b.classList.toggle("on", b.dataset.tab===tab));
+  $("#pageTitle").textContent = tab==="home"?t("app_name"):tab==="growth"?t("growth_title"):tab==="saved"?t("saved_title"):t("settings");
+  renderChips();
+  if(tab==="home") loadHome(false);
+  else if(tab==="growth") loadGrowth(false);
+  else if(tab==="saved") loadSaved();
+  else renderSettings();
+}
+function updateOnlineBar(){
+  const bar = $("#offlineBar");
+  if(navigator.onLine){ bar.style.display="none"; }
+  else { bar.textContent = t("offline"); bar.style.display="block"; }
+}
+
+async function init(){
+  applyTheme(); applyUiLang(); updateOnlineBar();
+  if("serviceWorker" in navigator){
+    try{ navigator.serviceWorker.register("./sw.js"); }catch(e){}
+  }
+  await loadWeights();
+  const saved = await kvPrefix("saved:").catch(()=>[]);
+  saved.forEach(r=>{
+    if(r && r.a){
+      if(r.reason==="manual"||r.reason==="growth") state.savedIds.add(r.a.id);
+      state.readIds.add(r.a.id);
+    }
+  });
+
+  $$(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+  $("#refreshBtn").onclick = ()=>{
+    if(state.tab==="home") loadHome(true);
+    else if(state.tab==="growth") loadGrowth(true);
+    else if(state.tab==="saved") loadSaved();
+    toast(t("refresh_done"));
+  };
+  $("#sheetBg").onclick = closeSheet;
+  window.addEventListener("online", updateOnlineBar);
+  window.addEventListener("offline", updateOnlineBar);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ runDigestCheck(); } });
+
+  if(!prefs.onboarded){ renderOnboarding(0); }
+  else {
+    switchTab("home", true);
+    scheduleDigestTimer();
+    setTimeout(runDigestCheck, 1500);
+  }
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
